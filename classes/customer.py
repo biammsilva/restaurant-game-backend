@@ -1,4 +1,5 @@
 from typing import List
+from .enums import OrderType
 
 
 class Customer:
@@ -16,7 +17,7 @@ class Customer:
         self.satisfied = True
         self.table = None
         self.order = None
-        self.can_leave = False
+        self.paid_bills = False
         self.left = False
 
     def sit(self, table_id: int) -> None:
@@ -24,10 +25,18 @@ class Customer:
 
     def order(self, order_id: int) -> None:
         self.order = order_id
+        if OrderType(order_id).name == 'dinner':
+            self.will_have_dinner = True
+        elif OrderType(order_id).name == 'dessert':
+            self.will_have_dessert = True
 
-    def pay_bill(self) -> None:
-        self.can_leave = True
-        self.leave()
+    def pay_bills(self) -> None:
+        self.paid_bills = True
 
     def leave(self) -> None:
+        if self.paid_bills:
+            self.satisfied = True
+        else:
+            self.satisfied = self.table is None
+
         self.left = True

@@ -6,3 +6,8 @@ class NoTablesAvailable(Exception):
 class TableNotAvailable(Exception):
     def __init__(self):
         super().__init__('This table is not available')
+
+
+class LineExceededSize(Exception):
+    def __init__(self):
+        super().__init__('The line exceeded maximum size')
