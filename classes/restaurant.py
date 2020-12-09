@@ -1,5 +1,6 @@
 from typing import List
 
+from .exceptions import NoTablesAvailable, TableNotAvailable
 from .customer import Customer
 
 
@@ -25,10 +26,21 @@ class Restaurant:
         self.dinner_prepare_time = dinner_prepare_time
         self.dessert_prepare_time = dessert_prepare_time
         self.line_number = line_number
-        self.tables = {}
+        self.tables = self.setup_tables()
+
+    def setup_tables(self) -> dict:
+        pass
 
     def add_costumers_to_table(self, customers: List(Customer),
                                table_id: int) -> None:
+        if len(self.tables) >= self.number_of_tables:
+            raise NoTablesAvailable()
+        elif self.tables.get(table_id) is not None:
+            raise TableNotAvailable()
+
         table = Table()
         table.add_customer(customers, bulk=True)
         self.tables[table_id] = table
+
+    def clean_table(self, table_id: int) -> None:
+        self.tables[table_id] = None
