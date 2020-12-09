@@ -4,9 +4,10 @@ from .enums import OrderType
 
 class Customer:
 
-    def __init__(self, id: str, restaurant_id: str, state: int,
-                 stress_level: int, sit_together: List(str),
-                 will_have_dinner: bool, will_have_dessert: bool) -> None:
+    def __init__(self, id: str = None, restaurant_id: str = None,
+                 state: int = None, stress_level: int = None,
+                 sit_together: List[str] = [], will_have_dinner: bool = None,
+                 will_have_dessert: bool = None) -> None:
         self.id = id
         self.restaurant_id = restaurant_id
         self.state = state
@@ -40,3 +41,6 @@ class Customer:
             self.satisfied = self.table is None
 
         self.left = True
+
+    def __str__(self):
+        return self.id
