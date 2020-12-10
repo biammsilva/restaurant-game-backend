@@ -1,55 +1,94 @@
-from typing import List
-from .enums import OrderType, State
-from .exceptions import OrderDeliveredWrong
+from .enums import State, OrderType
 
 
 class Customer:
 
-    def __init__(self, id: str = None, restaurant_id: str = None,
-                 state: int = None, stress_level: int = None,
-                 sit_together: List[str] = [], will_have_dinner: bool = None,
-                 will_have_dessert: bool = None) -> None:
-        self.id = id
-        self.restaurant_id = restaurant_id
-        self.state = state
-        self.stress_level = stress_level
-        self.sit_together = sit_together
-        self.will_have_dinner = will_have_dinner
-        self.will_have_dessert = will_have_dessert
-        self.satisfied = True
-        self.table = None
-        self.orders = []
-        self.paid_bills = False
-        self.left = False
+    def update(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            if key == 'state':
+                continue
+            setattr(self, key, value)
+        self.state = kwargs['state']
 
-    def sit(self, table_id: int) -> None:
-        self.table = table_id
-        self.state = State.waiting_on_full_table
+    @property
+    def state(self):
+        return self.state
 
-    def submit_order(self, order: OrderType) -> None:
-        self.orders.append(order)
-        self.state = State.waiting_for_order
+    def please_sit(self):
+        return {
+            "name": "please_sit",
+            "payload": {
+                "customer_id": self.id,
+                "table_id": self.table,
+            }
+        }
 
-    def get_order(self, order: OrderType) -> None:
-        if order not in self.orders:
-            raise OrderDeliveredWrong()
-        self.orders.remove(order)
-        self.state = State.eating
+    def please_leave(self):
+        return {
+            "name": "please_leave",
+            "payload": {
+                "customer_id": self.id,
+            }
+        }
 
-    def pay_bills(self) -> None:
-        self.paid_bills = True
+    def take_order(self):
+        return {
+            "name": "take_order",
+            "payload": {
+                "customer_id": self.id,
+                "table_id": self.table,
+                "order_id": self.order_id
+            }
+        }
 
-    def leave(self) -> None:
-        if self.paid_bills:
-            self.satisfied = True
-        elif self.table and (
-                not self.will_have_dinner and not self.will_have_dessert
-             ):
-            self.satisfied = True
-        else:
-            self.satisfied = self.table is None
+    def deliver_order(self):
+        message = {
+            "name": "deliver_order",
+            "payload": {
+                "customer_id": self.id,
+                "table_id": self.table,
+                "order_id": self.order_id
+            }
+        }
+        self.order_id = None
+        return message
 
-        self.left = True
+    @state.setter
+    def state(self, value):
+        if value == State.waiting_outside.value:
+            table = self.restaurant.find_table(self)
+            if table is not None:
+                self.table = table
+                self.return_message = self.please_sit()
+            else:
+                self.return_message = self.please_leave()
+        elif value == State.waiting_on_full_table.value:
+            if self.will_have_dinner:
+                self.order_id = OrderType.dinner.value
+                self.will_have_dinner = False
+                self.return_message = self.take_order()
+            elif self.will_have_dessert:
+                self.order_id = OrderType.dessert.value
+                self.will_have_dessert = False
+                self.return_message = self.take_order()
+            else:
+                self.return_message = self.please_leave()
+        elif value == State.waiting_for_order.value:
+            if self.order_id is not None:
+                self.return_message = self.deliver_order()
+        elif value == State.eating.value:
+            self.return_message = None
+            pass
+        elif value == State.waiting_bill.value:
+            self.return_message = {
+                "name": "bring_bill",
+                "payload": {
+                    "customer_id": self.id,
+                    "table_id": self.table
+                }
+            }
+        elif value == State.left.value:
+            self.restaurant.remove_customer(self)
 
-    def __str__(self):
-        return self.id
+    def get_message(self):
+        return self.return_message
