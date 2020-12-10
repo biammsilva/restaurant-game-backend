@@ -1,5 +1,6 @@
 from typing import List
-from .enums import OrderType
+from .enums import OrderType, State
+from .exceptions import OrderDeliveredWrong
 
 
 class Customer:
@@ -17,25 +18,33 @@ class Customer:
         self.will_have_dessert = will_have_dessert
         self.satisfied = True
         self.table = None
-        self.order = None
+        self.orders = []
         self.paid_bills = False
         self.left = False
 
     def sit(self, table_id: int) -> None:
         self.table = table_id
+        self.state = State.waiting_on_full_table
 
-    def order(self, order_id: int) -> None:
-        self.order = order_id
-        if OrderType(order_id).name == 'dinner':
-            self.will_have_dinner = True
-        elif OrderType(order_id).name == 'dessert':
-            self.will_have_dessert = True
+    def submit_order(self, order: OrderType) -> None:
+        self.orders.append(order)
+        self.state = State.waiting_for_order
+
+    def get_order(self, order: OrderType) -> None:
+        if order not in self.orders:
+            raise OrderDeliveredWrong()
+        self.orders.remove(order)
+        self.state = State.eating
 
     def pay_bills(self) -> None:
         self.paid_bills = True
 
     def leave(self) -> None:
         if self.paid_bills:
+            self.satisfied = True
+        elif self.table and (
+                not self.will_have_dinner and not self.will_have_dessert
+             ):
             self.satisfied = True
         else:
             self.satisfied = self.table is None

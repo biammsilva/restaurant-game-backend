@@ -30,13 +30,12 @@ class Restaurant:
             lambda cs: cs.id == customer_id, self.all_customers
         ))
 
-    def please_sit(self, customer_id: str,
+    def please_sit(self, customer: Customer,
                    table_id: int) -> None:
-        customer = self.get_customer(customer_id)
         table = self.tables.get(table_id)
         if len(self.get_occuppied_tables()) >= self.number_of_tables:
             raise NoTablesAvailable()
-        elif table is not None:
+        elif table is not None and not table.table_closed:
             sit_together = table.customers[0].sit_together
             if customer.id not in sit_together:
                 raise TableNotAvailable()
@@ -46,21 +45,22 @@ class Restaurant:
         self.line.remove(customer)
         table.add_customer(customer)
 
-    def take_order(self, table_id: int, customer_id: str,
+    def take_order(self, table_id: int, customer: Customer,
                    order_id: int) -> None:
-        customer = self.get_customer(customer_id)
         self.get_table(table_id).take_order(customer, order_id)
 
-    def deliver_order(self, table_id: int, order_id: int):
-        self.get_table(table_id).deliver_order()
+    def deliver_order(self, customer: Customer, table_id: int, order_id: int):
+        self.get_table(table_id).deliver_order(order_id, customer)
 
-    def bring_bill(self, table_id: int) -> None:
-        table = self.get_table(table_id)
-        table.clean(paid_bills=True)
-        self.tables[table_id] = None
+    def bring_bill(self, customer: Customer) -> None:
+        customer.pay_bills()
 
-    def please_leave(self, customer_id: str) -> None:
-        customer = self.get_customer(customer_id)
+    def please_leave(self, customer: Customer) -> None:
+        if customer.table is not None:
+            table = self.get_table(customer.table)
+            table.remove_customer(customer)
+            if table.is_empty():
+                self.tables[customer.table] = None
         customer.leave()
 
     def get_in_line(self, customer: Customer):
