@@ -12,13 +12,17 @@ class Restaurant:
         self.tables_list: Dict[int, List[Customer]] = {}
         self.customers: Dict[str, Customer] = {}
         self.line: List[Customer] = set()
-        self.tables = 0
+        self.tables: int = 0
+        self.score: float = 0
+        self.state: int = None
 
     def update(self, **kwargs) -> None:
         for key, value in kwargs.items():
             setattr(self, key, value)
         if 'tables' in kwargs:
             self.tables_list = self.setup_tables()
+        if self.state == 1:
+            self.close()
 
     def setup_tables(self) -> dict:
         return {i: [] for i in range(0, self.tables)}
@@ -48,7 +52,6 @@ class Restaurant:
     def remove_customer(self, customer: Customer) -> None:
         if customer.table is not None:
             self.tables_list[customer.table].remove(customer)
-        del self.customers[customer.id]
 
     def add_to_line(self, customer: Customer) -> None:
         if len(self.line) >= self.line_number:
@@ -68,3 +71,27 @@ class Restaurant:
         if order == OrderType.dessert.value:
             comparator = self.dessert_prepare_time
         return (datetime.now - last_order_time).total_seconds() <= comparator
+
+    def ask_next_client_to_sit(self) -> dict:
+        table = self.get_empty_table()
+        if self.has_empty_tables():
+            customer = self.next_in_line()
+            if customer:
+                customer.please_sit(table)
+
+    def had_all_customers_on_table_done_eating(self, table: int) -> bool:
+        table = self.tables_list[table]
+        return len([customer for customer in table if customer.state < 3]) == 0
+
+    def close(self) -> None:
+        satisfied_customers = sum(
+            bool(cs.satisfied) for cs in self.customers.values()
+        )
+        self.score = satisfied_customers / len(self.customers)
+
+    def serialize(self) -> dict:
+        return {
+            'id': self.id,
+            'state': self.state,
+            'score': self.score
+        }

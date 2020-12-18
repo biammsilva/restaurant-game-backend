@@ -2,34 +2,22 @@ from typing import List, Any
 from datetime import datetime
 
 from .enums import State, OrderType
+from .exceptions import LineExceededSize
 
 
 class Customer:
 
-    def __init__(self, id: str, state: int, stress_level: int, restaurant: Any,
-                 restaurant_id: int = None, sit_together: List[str] = None,
-                 will_have_dinner: bool = None,
-                 will_have_dessert: bool = None):
-        self.id = id
-        self.restaurant_id = restaurant_id
+    def __init__(self, restaurant: Any):
         self.restaurant = restaurant
-        self.stress_level = stress_level
-        self.sit_together = sit_together
-        self.will_have_dessert = will_have_dessert
-        self.will_have_dinner = will_have_dinner
         self.satisfied = True
-        self.state = state
 
     def update(self, **kwargs) -> None:
+        state = kwargs.pop('state')
         for key, value in kwargs.items():
             setattr(self, key, value)
+        self.set_state(state)
 
-    @property
-    def state(self):
-        return self.state
-
-    @state.setter
-    def state(self, value):
+    def set_state(self, value: int) -> None:
         if self.restaurant.state == 0:
             self.return_message = None
             if value == State.waiting_outside.value:
@@ -40,7 +28,10 @@ class Customer:
                 if table is not None:
                     self.please_sit(table)
                 else:
-                    self.restaurant.add_to_line(self)
+                    try:
+                        self.restaurant.add_to_line(self)
+                    except LineExceededSize:
+                        self.return_message = '#'
             elif value == State.waiting_on_full_table.value:
                 if self.will_have_dinner:
                     self.order_id = OrderType.dinner.value
@@ -69,7 +60,8 @@ class Customer:
                 customers_table = self.restaurant.tables[self.table]
                 for customer in customers_table:
                     if not customer.ate_dessert():
-                        self.return_message = '#'
+                        # self.return_message = '#'
+                        return
                 self.return_message = {
                     "name": "bring_bill",
                     "payload": {
@@ -77,15 +69,17 @@ class Customer:
                         "table_id": self.table
                     }
                 }
+                if self.restaurant.had_all_customers_on_table_done_eating():
+                    customers = self.restaurant.tables[self.table]
+                    for customer in customers:
+                        customer.please_leave()
             elif value == State.left.value:
                 table = self.table
                 self.restaurant.remove_customer(self)
-                if self.restaurant.has_empty_tables():
-                    customer = self.restaurant.next_in_line()
-                    if customer:
-                        customer.please_sit(table)
+                if table:
+                    self.restaurant.ask_next_client_to_sit()
 
-    def please_sit(self, table_id: int):
+    def please_sit(self, table_id: int) -> None:
         self.table = table_id
         self.return_message = {
             "name": "please_sit",
@@ -95,7 +89,9 @@ class Customer:
             }
         }
 
-    def please_leave(self):
+    def please_leave(self) -> None:
+        if self.table:
+            self.restaurant.ask_next_client_to_sit()
         self.return_message = {
             "name": "please_leave",
             "payload": {
@@ -103,7 +99,7 @@ class Customer:
             }
         }
 
-    def take_order(self):
+    def take_order(self) -> None:
         self.return_message = {
             "name": "take_order",
             "payload": {
@@ -113,7 +109,7 @@ class Customer:
             }
         }
 
-    def deliver_order(self):
+    def deliver_order(self) -> None:
         self.return_message = {
             "name": "deliver_order",
             "payload": {
@@ -124,11 +120,11 @@ class Customer:
         }
         self.order_id = None
 
-    def ate_dessert(self):
+    def ate_dessert(self) -> bool:
         return not self.will_have_dessert
 
-    def ate_dinner(self):
+    def ate_dinner(self) -> bool:
         return not self.will_have_dinner
 
-    def get_message(self):
+    def get_message(self) -> str:
         return self.return_message

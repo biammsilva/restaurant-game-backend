@@ -16,13 +16,17 @@ CUSTOMERS = {}
 
 
 async def game(websocket, path):
-    while True:
+    running = True
+    while running:
         try:
             message = await websocket.recv()
             data = json.loads(message)
             payload = data.get('payload')
             if data.get('name') == 'restaurant_update':
-                restaurant = Restaurant()
+                if payload['id'] in RESTAURANTS:
+                    restaurant = RESTAURANTS[payload['id']]
+                else:
+                    restaurant = Restaurant()
                 restaurant.update(**payload)
                 RESTAURANTS[payload['id']] = restaurant
             elif data.get('name') == 'customer_update':
@@ -35,18 +39,15 @@ async def game(websocket, path):
                 if payload['id'] in CUSTOMERS:
                     customer = CUSTOMERS[payload['id']]
                 else:
-                    customer = Customer(
-                        payload.pop('id'),
-                        payload.pop('state'),
-                        payload.pop('stress_level'),
-                        restaurant,
-                        **payload
-                    )
+                    customer = Customer()
                 customer.update(**payload)
                 CUSTOMERS[customer.id] = customer
                 if state == State.left.value:
                     del CUSTOMERS[customer.id]
                 if customer.get_message():
+                    if customer.get_message() == '#':
+                        running = False
+                        break
                     await websocket.send(json.dumps(
                         customer.get_message()
                     ))
@@ -56,7 +57,7 @@ async def game(websocket, path):
             print(e)
 
 
-start_server = websockets.serve(game, "localhost", 6789)
+start_server = websockets.serve(game, "0.0.0.0", 6789)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

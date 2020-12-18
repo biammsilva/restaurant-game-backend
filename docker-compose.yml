@@ -1,0 +1,17 @@
+version: '2.4'
+services: 
+    wsserver:
+        restart: always
+        ports: 
+            - 6789:6789
+        build: .   
+    ngproxy:
+        image: nginx
+        ports: 
+            - 8020:80
+            - 5000:5000
+        restart: always
+        depends_on:
+            - wsserver
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
