@@ -15,6 +15,8 @@ class Restaurant:
         self.tables: int = 0
         self.score: float = 0
         self.state: int = None
+        # TODO: change to environment variable
+        self.table_size = 4
 
     def update(self, **kwargs) -> None:
         for key, value in kwargs.items():
@@ -41,8 +43,10 @@ class Restaurant:
                          if customer_id in self.customers.keys()]
             if customers:
                 self.customers[customer.id] = customer
-                self.tables_list[customers[0].table].append(customer)
-                return customers[0].table
+                table = customers[0].table
+                self.tables_list[table].append(customer)
+                if len(self.tables[table]) < self.table_size:
+                    return table
         empty_tables = self.get_empty_table()
         if empty_tables:
             self.customers[customer.id] = customer

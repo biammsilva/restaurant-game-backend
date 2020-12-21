@@ -3,7 +3,7 @@ services:
     wsserver:
         restart: always
         ports: 
-            - 6789:6789
+            - 8110:8110
         build: .   
     ngproxy:
         image: nginx

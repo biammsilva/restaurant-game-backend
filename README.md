@@ -19,3 +19,22 @@ Each customers state can receive a limited list of events from the client:
     - bring_bill
 * Left
     - N/A
+
+
+## Running with python:
+
+### Installing dependencies:
+
+    pip install pipenv
+    pipenv shell
+    pipenv install
+
+### Running
+
+    python server.py
+
+
+**TODO**: 
+- Write unit tests
+- Test nginx with docker along
+- Implement some changes written in the code

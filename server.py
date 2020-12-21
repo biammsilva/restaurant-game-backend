@@ -32,7 +32,8 @@ async def game(websocket, path):
             elif data.get('name') == 'customer_update':
                 restaurant_id = payload.get('restaurant_id')
                 if restaurant_id is None:
-                    # Get most empty restaurant
+                    # Geting first restaurant
+                    # TODO: get the most empty restaurant
                     restaurant_id = list(RESTAURANTS.keys())[0]
                 restaurant = RESTAURANTS.get(restaurant_id)
                 state = payload['state']
@@ -54,10 +55,11 @@ async def game(websocket, path):
         except LineExceededSize:
             await websocket.send('#')
         except Exception as e:
+            # TODO: deal with the exceptions
             print(e)
 
 
-start_server = websockets.serve(game, "0.0.0.0", 6789)
+start_server = websockets.serve(game, "0.0.0.0", 8110)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
